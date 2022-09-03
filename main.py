@@ -51,7 +51,32 @@ def get_stock_details(symbol):
     change = row["Net Change"]
     percentChange = row["% Change"]
     name = row["Name"]
-    return [price,change,percentChange,name]
+    return {
+        "symbol":symbol,
+        "price":price,
+        "change":change,
+        "percentChange":percentChange,
+        "name":name
+    }
+
+def get_stocks_details(symbols):
+    global df
+    li = []
+    for symbol in symbols:
+        row = df.loc[symbol]
+        price = row["Last Sale"]
+        change = row["Net Change"]
+        percentChange = row["% Change"]
+        name = row["Name"]
+        item = {
+            "symbol":symbol,
+            "price":price,
+            "change":change,
+            "percentChange":percentChange,
+            "name":name
+        }
+        li.append(item)
+    return li
 
 
 scheduler = BackgroundScheduler()
@@ -65,6 +90,9 @@ app = Flask(__name__)
 @app.route("/quote")
 def display_stock():
     symbol = request.args.get("symbol",default="AAPL")
+    if symbol.count("_") >= 1:
+        symbols = symbol.split("_")
+        return get_stocks_details(symbols)
     return get_stock_details(symbol)
     
 if __name__ == "__main__":
