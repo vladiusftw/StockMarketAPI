@@ -49,6 +49,15 @@ def download_stock_data():
     df = pandas.read_csv("test.csv", index_col=0)
 
 
+scheduler = BackgroundScheduler()
+scheduler.add_job(func=download_stock_data, trigger="interval", seconds=60)
+scheduler.start()
+
+atexit.register(lambda: scheduler.shutdown())
+
+app = Flask(__name__)
+
+
 def get_stock_details(symbol):
     global df
     tempDF = df.filter(items=[symbol], axis=0).reset_index()
@@ -59,15 +68,6 @@ def get_stocks_by_search(symbol):
     global df
     tempDF = df.filter(like=symbol, axis=0).reset_index()
     return (tempDF[["Symbol", "Name", "Last Sale", 'Net Change', '% Change']]).values.tolist()
-
-
-scheduler = BackgroundScheduler()
-scheduler.add_job(func=download_stock_data, trigger="interval", seconds=60)
-scheduler.start()
-
-atexit.register(lambda: scheduler.shutdown())
-
-app = Flask(__name__)
 
 
 @app.route("/quote")
