@@ -52,7 +52,7 @@ def download_stock_data():
 def get_stock_details(symbol):
     global df
     tempDF = df.filter(items=[symbol], axis=0).reset_index()
-    return (tempDF[["Symbol", "Name", "Last Sale", 'Net Change', '% Change']]).values.tolist()
+    return (tempDF[["Symbol", "Name", "Last Sale", 'Net Change', '% Change', 'Market Cap', 'Volume', 'Sector', 'Industry']]).values.tolist()
 
 
 def get_stocks_by_search(symbol):
