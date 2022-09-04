@@ -5,24 +5,28 @@ import time
 import pandas
 import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
-from flask import Flask,request
+from flask import Flask, request
 
-df = pandas.read_csv("test.csv",index_col=0)
+df = pandas.read_csv("test.csv", index_col=0)
+
 
 def download_stock_data():
     print("starting download")
     global df
     options = webdriver.ChromeOptions()
-    prefs = {"download.default_directory":os.getcwd()}
-    options.add_experimental_option("prefs",prefs)
+    prefs = {"download.default_directory": os.getcwd()}
+    options.add_experimental_option("prefs", prefs)
 
-    driver = webdriver.Chrome(executable_path='chromedriver.exe',chrome_options=options)
+    driver = webdriver.Chrome(
+        executable_path=os.getcwd()+'/chromedriver.exe', chrome_options=options)
     driver.minimize_window()
     while True:
         try:
-            driver.get("https://www.nasdaq.com/market-activity/stocks/screener?exchange=NASDAQ&render=download")
+            driver.get(
+                "https://www.nasdaq.com/market-activity/stocks/screener?exchange=NASDAQ&render=download")
 
-            download_csv = driver.find_element_by_css_selector("body > div.dialog-off-canvas-main-canvas > div > main > div.page__content > article > div:nth-child(3) > div.layout--main > div > div > div.nasdaq-screener__content-container > div:nth-child(2) > div.nasdaq-screener__download > div > button")
+            download_csv = driver.find_element_by_css_selector(
+                "body > div.dialog-off-canvas-main-canvas > div > main > div.page__content > article > div:nth-child(3) > div.layout--main > div > div > div.nasdaq-screener__content-container > div:nth-child(2) > div.nasdaq-screener__download > div > button")
             download_csv.click()
             time.sleep(5)
             driver.close()
@@ -33,50 +37,28 @@ def download_stock_data():
 
     while True:
         try:
-            filename = max([os.getcwd() + "\\" + f for f in os.listdir(os.getcwd())],key=os.path.getctime)
+            filename = max(
+                [os.getcwd() + "\\" + f for f in os.listdir(os.getcwd())], key=os.path.getctime)
             print(filename)
-            shutil.move(os.path.join(os.getcwd(),filename),"test.csv")
+            shutil.move(os.path.join(os.getcwd(), filename), "test.csv")
             print('done')
             break
         except:
             print("failed rename")
 
-    df = pandas.read_csv("test.csv",index_col=0)
+    df = pandas.read_csv("test.csv", index_col=0)
 
 
 def get_stock_details(symbol):
     global df
-    row = df.loc[symbol]
-    price = row["Last Sale"]
-    change = row["Net Change"]
-    percentChange = row["% Change"]
-    name = row["Name"]
-    return {
-        "symbol":symbol,
-        "price":price,
-        "change":change,
-        "percentChange":percentChange,
-        "name":name
-    }
+    tempDF = df.filter(items=[symbol], axis=0).reset_index()
+    return (tempDF[["Symbol", "Name", "Last Sale", 'Net Change', '% Change']]).values.tolist()
 
-def get_stocks_details(symbols):
+
+def get_stocks_by_search(symbol):
     global df
-    li = []
-    for symbol in symbols:
-        row = df.loc[symbol]
-        price = row["Last Sale"]
-        change = row["Net Change"]
-        percentChange = row["% Change"]
-        name = row["Name"]
-        item = {
-            "symbol":symbol,
-            "price":price,
-            "change":change,
-            "percentChange":percentChange,
-            "name":name
-        }
-        li.append(item)
-    return li
+    tempDF = df.filter(like=symbol, axis=0).reset_index()
+    return (tempDF[["Symbol", "Name", "Last Sale", 'Net Change', '% Change']]).values.tolist()
 
 
 scheduler = BackgroundScheduler()
@@ -87,16 +69,18 @@ atexit.register(lambda: scheduler.shutdown())
 
 app = Flask(__name__)
 
+
 @app.route("/quote")
 def display_stock():
-    symbol = request.args.get("symbol",default="AAPL")
-    if symbol.count("_") >= 1:
-        symbols = symbol.split("_")
-        return get_stocks_details(symbols)
+    symbol = request.args.get("symbol", default="AAPL")
     return get_stock_details(symbol)
-    
+
+
+@app.route("/search")
+def search_stocks():
+    symbol = request.args.get("symbol", default="")
+    return get_stocks_by_search(symbol)
+
+
 if __name__ == "__main__":
     app.run()
-
-
-
