@@ -50,7 +50,7 @@ def download_stock_data():
 
 
 scheduler = BackgroundScheduler()
-scheduler.add_job(func=download_stock_data, trigger="interval", seconds=10)
+scheduler.add_job(func=download_stock_data, trigger="interval", seconds=30)
 scheduler.start()
 
 atexit.register(lambda: scheduler.shutdown())
