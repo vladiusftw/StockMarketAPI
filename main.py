@@ -8,8 +8,8 @@ import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, request
 import numpy as np
+import glob
 
-df = pandas.read_csv("test.csv", index_col=0)
 options = webdriver.ChromeOptions()
 prefs = {"download.default_directory": os.getcwd()}
 options.add_experimental_option("prefs", prefs)
@@ -20,8 +20,6 @@ driver.minimize_window()
 
 def download_stock_data():
     print("starting download")
-    global df
-    global driver
     driver.get(
         "https://www.nasdaq.com/market-activity/stocks/screener?exchange=NASDAQ&render=download")
     while True:
@@ -31,23 +29,19 @@ def download_stock_data():
             download_csv.click()
             time.sleep(5)
             print('downloaded')
+            try:
+                list_of_files = glob.glob(os.getcwd() + "/*.csv")
+                list_of_files.remove(max(list_of_files, key=os.path.getctime))
+                for filename in list_of_files:
+                    filename_relPath = os.path.join(os.getcwd(),filename)
+                    print(filename)
+                    os.remove(filename_relPath)
+            except Exception as e:
+                print(e)
             break
         except:
             print('invalid')
-
-    while True:
-        try:
-            filename = max(
-                [os.getcwd() + "\\" + f for f in os.listdir(os.getcwd())], key=os.path.getctime)
-            print(filename)
-            shutil.move(os.path.join(os.getcwd(), filename), "test.csv")
-            print('done')
-            break
-        except:
-            print("failed rename")
-
-    df = pandas.read_csv("test.csv", index_col=0)
-
+    
 
 scheduler = BackgroundScheduler()
 scheduler.add_job(func=download_stock_data, trigger="interval", seconds=30)
@@ -60,14 +54,16 @@ app = Flask(__name__)
 
 
 def get_stock_details(symbol):
-    global df
-    tempDF = df.filter(items=[symbol], axis=0).reset_index()
+    list_of_files = glob.glob(os.getcwd() + "/*.csv")
+    latest_file = max(list_of_files, key=os.path.getctime)
+    tempDF = pandas.read_csv(latest_file, index_col=0).filter(items=[symbol], axis=0).reset_index()
     return (tempDF[["Symbol", "Name", "Last Sale", 'Net Change', '% Change', 'Market Cap', 'Volume', 'Sector', 'Industry']]).replace(np.nan, "", regex=True).values.tolist()
 
 
 def get_stocks_by_search(symbol):
-    global df
-    tempDF = df.filter(like=symbol, axis=0).reset_index()
+    list_of_files = glob.glob(os.getcwd() + "/*.csv")
+    latest_file = max(list_of_files, key=os.path.getctime)
+    tempDF = pandas.read_csv(latest_file, index_col=0).filter(like=symbol, axis=0).reset_index()
     return (tempDF[["Symbol", "Name", "Last Sale", 'Net Change', '% Change', 'Market Cap', 'Volume', 'Sector', 'Industry']]).replace(np.nan, "", regex=True).head(100).values.tolist()
 
 
